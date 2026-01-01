@@ -2,7 +2,7 @@
 from textnode import TextType, TextNode
 from markdown import markdown_to_html_node, extract_title
 
-import os, shutil, re
+import os, shutil, re, sys
 
 def copy_static(source, destination):
     if not os.path.exists(source):
@@ -16,7 +16,7 @@ def copy_static(source, destination):
         else:
             copy_static(os.path.join(source, file), os.path.join(destination, file))
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, basepath):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
     file = open(from_path)
     markdown = file.read()
@@ -29,22 +29,30 @@ def generate_page(from_path, template_path, dest_path):
     my_title = extract_title(markdown)
     template = re.sub(r"\{\{ Title }}", my_title, template)
     template = re.sub(r"\{\{ Content }}", my_html, template)
+    template = re.sub(r"(href=\"/)",f'href="{basepath}',template)
+    template = re.sub(r"(src=\"/)",f'src="{basepath}', template)
     file = open(dest_path, "w")
     file.write(template)
     file.close()
     
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, basepath):
     for file in os.listdir(dir_path_content):
         if os.path.isfile(os.path.join(dir_path_content, file)):
-            generate_page(os.path.join(dir_path_content, file), template_path, os.path.join(dest_dir_path, re.sub(r"(\.md)$", ".html", file)))
+            generate_page(os.path.join(dir_path_content, file), template_path, os.path.join(dest_dir_path, re.sub(r"(\.md)$", ".html", file)), basepath)
         else:
             os.mkdir(os.path.join(dest_dir_path, file))
-            generate_pages_recursive(os.path.join(dir_path_content, file), template_path, os.path.join(dest_dir_path, file))
+            generate_pages_recursive(os.path.join(dir_path_content, file), template_path, os.path.join(dest_dir_path, file), basepath)
 
 def main():
-    copy_static("/home/lazlo/StaticSite/static", "/home/lazlo/StaticSite/public/")
-    #generate_page("/home/lazlo/StaticSite/content/index.md", "/home/lazlo/StaticSite/template.html", "/home/lazlo/StaticSite/public/index.html")
-    generate_pages_recursive("/home/lazlo/StaticSite/content/", "/home/lazlo/StaticSite/template.html", "/home/lazlo/StaticSite/public/")
+    try:
+        basepath = sys.argv[1]
+    except:
+        basepath = "/"
+    
+    #copy_static("/home/lazlo/StaticSite/static", "/home/lazlo/StaticSite/public/")
+    #generate_pages_recursive("/home/lazlo/StaticSite/content/", "/home/lazlo/StaticSite/template.html", "/home/lazlo/StaticSite/public/", basepath)
+    copy_static("/home/lazlo/StaticSite/static", "/home/lazlo/StaticSite/docs/")
+    generate_pages_recursive("/home/lazlo/StaticSite/content/", "/home/lazlo/StaticSite/template.html", "/home/lazlo/StaticSite/docs/", basepath)
 
 if __name__=="__main__":
     main()
